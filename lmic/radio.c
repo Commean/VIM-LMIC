@@ -263,6 +263,7 @@ static u1_t randbuf[16];
 
 
 static void writeReg (u1_t addr, u1_t data ) {
+    fprintf(stdout, "W: Addr: %d - Data: %d\n", addr, data);
     hal_pin_nss(0);
     hal_spi(addr | 0x80);
     hal_spi(data);
@@ -274,6 +275,7 @@ static u1_t readReg (u1_t addr) {
     hal_spi(addr & 0x7F);
     u1_t val = hal_spi(0x00);
     hal_pin_nss(1);
+    fprintf(stdout, "R: Addr: %d - Data: %d\n", addr, val);
     return val;
 }
 
@@ -472,7 +474,10 @@ static void txlora () {
     // select LoRa modem (from sleep mode)
     //writeReg(RegOpMode, OPMODE_LORA);
     opmodeLora();
+          fprintf(stdout, "%d-%d\n", readReg(RegOpMode),OPMODE_LORA);
     ASSERT((readReg(RegOpMode) & OPMODE_LORA) != 0);
+          fprintf(stdout, "ashtashtashtasthtashatshatshsthas\n");
+    ASSERT(1);
 
     // enter standby mode (required for FIFO loading))
     opmode(OPMODE_STANDBY);
@@ -507,11 +512,12 @@ static void txlora () {
     // now we actually start the transmission
     opmode(OPMODE_TX);
 }
-
 // start transmitter (buf=LMIC.frame, len=LMIC.dataLen)
 static void starttx () {
     ASSERT( (readReg(RegOpMode) & OPMODE_MASK) == OPMODE_SLEEP );
     if(getSf(LMIC.rps) == FSK) { // FSK modem
+        ASSERT(1==0);
+
         txfsk();
     } else { // LoRa modem
         txlora();

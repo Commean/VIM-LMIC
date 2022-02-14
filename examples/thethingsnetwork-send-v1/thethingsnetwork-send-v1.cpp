@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2015 Thomas Telkamp and Matthijs Kooijman
+ * Copyright (c) 2018 Terry Moore, MCCI
  *
  * Permission is hereby granted, free of charge, to anyone
  * obtaining a copy of this document and accompanying files,
@@ -7,164 +8,226 @@
  * including, but not limited to, copying, modification and redistribution.
  * NO WARRANTY OF ANY KIND IS PROVIDED.
  *
- * This example sends a valid LoRaWAN packet with payload "Hello, world!", that
- * will be processed by The Things Network server.
+ * This example sends a valid LoRaWAN packet with payload "Hello,
+ * world!", using frequency and encryption settings matching those of
+ * the The Things Network.
  *
- * Note: LoRaWAN per sub-band duty-cycle limitation is enforced (1% in g1, 
-*  0.1% in g2). 
+ * This uses OTAA (Over-the-air activation), where where a DevEUI and
+ * application key is configured, which are used in an over-the-air
+ * activation procedure where a DevAddr and session keys are
+ * assigned/generated for use with all further communication.
  *
- * Change DEVADDR to a unique address! 
- * See http://thethingsnetwork.org/wiki/AddressSpace
+ * Note: LoRaWAN per sub-band duty-cycle limitation is enforced (1% in
+ * g1, 0.1% in g2), but not the TTN fair usage policy (which is probably
+ * violated by this sketch when left running for longer)!
+
+ * To use this sketch, first register your application and device with
+ * the things network, to set or generate an AppEUI, DevEUI and AppKey.
+ * Multiple devices can use the same AppEUI, but each device has its own
+ * DevEUI and AppKey.
  *
- * Do not forget to define the radio type correctly in config.h, default is:
- *   #define CFG_sx1272_radio 1
- * for SX1272 and RFM92, but change to:
- *   #define CFG_sx1276_radio 1
- * for SX1276 and RFM95.
+ * Do not forget to define the radio type correctly in
+ * arduino-lmic/project_config/lmic_project_config.h or from your BOARDS.txt.
  *
  *******************************************************************************/
-
-#include <stdio.h>
-#include <time.h>
 #include <wiringPi.h>
+#include <wiringPiSPI.h>
+
 #include <lmic.h>
-#include <hal.h>
-#include <local_hal.h>
+#include <hal/hal.h>
+#include "Credentials.h"
 
-// LoRaWAN Application identifier (AppEUI)
-// Not used in this example
-static const u1_t APPEUI[8]  = { 0x02, 0x00, 0x00, 0x00, 0x00, 0xEE, 0xFF, 0xC0 };
+#define MAX_CHANNELS 16
+#define MAX_BANDS 4
+#define LIMIT_CHANNELS 0b1000
 
-// LoRaWAN DevEUI, unique device ID (LSBF)
-// Not used in this example
-static const u1_t DEVEUI[8]  = { 0x42, 0x42, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
-
-// LoRaWAN NwkSKey, network session key 
-// Use this key for The Things Network
-static const u1_t DEVKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
-
-// LoRaWAN AppSKey, application session key
-// Use this key to get your data decrypted by The Things Network
-static const u1_t ARTKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
-
-// LoRaWAN end-device address (DevAddr)
-// See http://thethingsnetwork.org/wiki/AddressSpace
-static const u4_t DEVADDR = 0xffffffff ; // <-- Change this address for every node!
-
-//////////////////////////////////////////////////
-// APPLICATION CALLBACKS
-//////////////////////////////////////////////////
-
-// provide application router ID (8 bytes, LSBF)
-void os_getArtEui (u1_t* buf) {
-    memcpy(buf, APPEUI, 8);
-}
-
-// provide device ID (8 bytes, LSBF)
-void os_getDevEui (u1_t* buf) {
-    memcpy(buf, DEVEUI, 8);
-}
-
-// provide device key (16 bytes)
-void os_getDevKey (u1_t* buf) {
-    memcpy(buf, DEVKEY, 16);
-}
-
-u4_t cntr=0;
-u1_t mydata[] = {"Hello, world!                               "};
+static uint8_t mydata[] = "Hello, world!";
 static osjob_t sendjob;
 
+// Schedule TX every this many seconds (might become longer due to duty
+// cycle limitations).
+const unsigned TX_INTERVAL = 60;
+
 // Pin mapping
-lmic_pinmap pins = {
-  .nss = 6,
-  .rxtx = UNUSED_PIN, // Not connected on RFM92/RFM95
-  .rst = 0,  // Needed on RFM92/RFM95
-  .dio = {7,4,5}
+const lmic_pinmap lmic_pins = {
+    .nss = 13,
+    .rxtx = LMIC_UNUSED_PIN,
+    .rst = 14,
+    // LoRa mode
+    // DIO0: TxDone and RxDone
+    // DIO1: RxTimeout
+
+    // FSK mode
+    // DIO0: PayloadReady and PacketSent
+    // DIO2: TimeOut
+    .dio = {6, 7, LMIC_UNUSED_PIN},
 };
 
-void onEvent (ev_t ev) {
-    //debug_event(ev);
-
-    switch(ev) {
-      // scheduled data sent (optionally data received)
-      // note: this includes the receive window!
-      case EV_TXCOMPLETE:
-          // use this event to keep track of actual transmissions
-          fprintf(stdout, "Event EV_TXCOMPLETE, time: %d\n", millis() / 1000);
-          if(LMIC.dataLen) { // data received in rx slot after tx
-              //debug_buf(LMIC.frame+LMIC.dataBeg, LMIC.dataLen);
-              fprintf(stdout, "Data Received!\n");
-          }
-          break;
-       default:
-          break;
-    }
+void printHex2(unsigned v) {
+    v &= 0xff;
+    if (v < 16)
+        printf("0");
+    //fprintf(v, HEX);
+    printf("TODO!\n");
 }
 
-static void do_send(osjob_t* j){
-      time_t t=time(NULL);
-      fprintf(stdout, "[%x] (%ld) %s\n", hal_ticks(), t, ctime(&t));
-      // Show TX channel (channel numbers are local to LMIC)
-      // Check if there is not a current TX/RX job running
-    if (LMIC.opmode & (1 << 7)) {
-      fprintf(stdout, "OP_TXRXPEND, not sending");
+void do_send(osjob_t* j){
+    // Check if there is not a current TX/RX job running
+    if (LMIC.opmode & OP_TXRXPEND) {
+        fprintf(stdout, "OP_TXRXPEND, not sending\n");
     } else {
-      // Prepare upstream data transmission at the next possible time.
-      char buf[100];
-      sprintf(buf, "Hello world! [%d]", cntr++);
-      int i=0;
-      while(buf[i]) {
-        mydata[i]=buf[i];
-        i++;
-      }
-      mydata[i]='\0';
-      LMIC_setTxData2(1, mydata, strlen(buf), 0);
+        // Prepare upstream data transmission at the next possible time.
+        LMIC_setTxData2(1, mydata, sizeof(mydata)-1, 0);
+        fprintf(stdout, "Packet queued\n");
     }
-    // Schedule a timed job to run at the given timestamp (absolute system time)
-    os_setTimedCallback(j, os_getTime()+sec2osticks(20), do_send);
-         
+    // Next TX is scheduled after TX_COMPLETE event.
+}
+
+void onEvent (ev_t ev) {
+    fprintf(stdout, "%d: ", os_getTime());
+    switch(ev) {
+        case EV_SCAN_TIMEOUT:
+            fprintf(stdout, "EV_SCAN_TIMEOUT\n");
+            break;
+        case EV_BEACON_FOUND:
+            fprintf(stdout, "EV_BEACON_FOUND\n");
+            break;
+        case EV_BEACON_MISSED:
+            fprintf(stdout, "EV_BEACON_MISSED\n");
+            break;
+        case EV_BEACON_TRACKED:
+            fprintf(stdout, "EV_BEACON_TRACKED\n");
+            break;
+        case EV_JOINING:
+            fprintf(stdout, "EV_JOINING\n");
+            break;
+        case EV_JOINED:
+            fprintf(stdout, "EV_JOINED\n");
+            {
+              u4_t netid = 0;
+              devaddr_t devaddr = 0;
+              u1_t nwkKey[16];
+              u1_t artKey[16];
+              LMIC_getSessionKeys(&netid, &devaddr, nwkKey, artKey);
+              fprintf(stdout, "netid: ");
+              //Serial.println(netid, DEC);
+              fprintf(stdout, "devaddr: ");
+              //Serial.println(devaddr, HEX);
+              fprintf(stdout, "AppSKey: ");
+              for (size_t i=0; i<sizeof(artKey); ++i) {
+                if (i != 0)
+                  fprintf(stdout, "-");
+                printHex2(artKey[i]);
+              }
+              //Serial.println("");
+              fprintf(stdout, "NwkSKey: ");
+              for (size_t i=0; i<sizeof(nwkKey); ++i) {
+                      if (i != 0)
+                              fprintf(stdout, "-");
+                      printHex2(nwkKey[i]);
+              }
+              //Serial.println();
+            }
+            // Disable link check validation (automatically enabled
+            // during join, but because slow data rates change max TX
+	    // size, we don't use it in this example.
+            LMIC_setLinkCheckMode(0);
+            break;
+        /*
+        || This event is defined but not used in the code. No
+        || point in wasting codespace on it.
+        ||
+        || case EV_RFU1:
+        ||     fprintf(stdout, "EV_RFU1\n");
+        ||     break;
+        */
+        case EV_JOIN_FAILED:
+            fprintf(stdout, "EV_JOIN_FAILED\n");
+            break;
+        case EV_REJOIN_FAILED:
+            fprintf(stdout, "EV_REJOIN_FAILED\n");
+            break;
+        case EV_TXCOMPLETE:
+            fprintf(stdout, "EV_TXCOMPLETE (includes waiting for RX windows\n)");
+            if (LMIC.txrxFlags & TXRX_ACK)
+              fprintf(stdout, "Received ack\n");
+            if (LMIC.dataLen) {
+              fprintf(stdout, "Received %d bytes of payload\n", LMIC.dataLen);
+            }
+            // Schedule next transmission
+            os_setTimedCallback(&sendjob, os_getTime()+sec2osticks(TX_INTERVAL), do_send);
+            break;
+        case EV_LOST_TSYNC:
+            fprintf(stdout, "EV_LOST_TSYNC\n");
+            break;
+        case EV_RESET:
+            fprintf(stdout, "EV_RESET\n");
+            break;
+        case EV_RXCOMPLETE:
+            // data received in ping slot
+            fprintf(stdout, "EV_RXCOMPLETE\n");
+            break;
+        case EV_LINK_DEAD:
+            fprintf(stdout, "EV_LINK_DEAD\n");
+            break;
+        case EV_LINK_ALIVE:
+            fprintf(stdout, "EV_LINK_ALIVE\n");
+            break;
+        /*
+        || This event is defined but not used in the code. No
+        || point in wasting codespace on it.
+        ||
+        || case EV_SCAN_FOUND:
+        ||    fprintf(stdout, "EV_SCAN_FOUND\n");
+        ||    break;
+        */
+        case EV_TXSTART:
+            fprintf(stdout, "EV_TXSTART\n");
+            break;
+        case EV_TXCANCELED:
+            fprintf(stdout, "EV_TXCANCELED\n");
+            break;
+        case EV_RXSTART:
+            /* do not print anything -- it wrecks timing */
+            break;
+        case EV_JOIN_TXCOMPLETE:
+            fprintf(stdout, "EV_JOIN_TXCOMPLETE: no JoinAccept\n");
+            break;
+
+        default:
+            fprintf(stdout, "Unknown event: %d", (unsigned) ev);
+            //Serial.println((unsigned) ev);
+            break;
+    }
 }
 
 void setup() {
-  // LMIC init
-  wiringPiSetup();
+    //Serial.begin(9600);
+    fprintf(stdout, "Starting\n");
+    #ifdef VCC_ENABLE
+    // For Pinoccio Scout boards
+    pinMode(VCC_ENABLE, OUTPUT);
+    digitalWrite(VCC_ENABLE, HIGH);
+    delay(1000);
+    #endif
 
-  os_init();
-  // Reset the MAC state. Session and pending data transfers will be discarded.
-  LMIC_reset();
-  // Set static session parameters. Instead of dynamically establishing a session 
-  // by joining the network, precomputed session parameters are be provided.
-  LMIC_setSession (0x1, DEVADDR, (u1_t*)DEVKEY, (u1_t*)ARTKEY);
-  // Disable data rate adaptation
-  LMIC_setAdrMode(0);
-  // Disable link check validation
-  LMIC_setLinkCheckMode(0);
-  // Disable beacon tracking
-  LMIC_disableTracking ();
-  // Stop listening for downstream data (periodical reception)
-  LMIC_stopPingable();
-  // Set data rate and transmit power (note: txpow seems to be ignored by the library)
-  LMIC_setDrTxpow(DR_SF7,14);
-  //
+    // LMIC init
+    os_init();
+    // Reset the MAC state. Session and pending data transfers will be discarded.
+    LMIC_reset();
+    LMIC_setupBand(4, 30, 30);
+
+    // Start job (sending automatically starts OTAA too)
+    do_send(&sendjob);
 }
 
 void loop() {
-
-do_send(&sendjob);
-
-while(1) {
-  os_runloop();
-//  os_runloop_once();
-  }
+    os_runloop_once();
 }
 
-
-int main() {
-  setup();
-
-  while (1) {
+int main()
+{
+    setup();
     loop();
-  }
-  return 0;
+    return 0;
 }
-

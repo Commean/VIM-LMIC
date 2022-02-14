@@ -24,9 +24,12 @@
  *
  *******************************************************************************/
 
+#include <stdio.h>
+#include <time.h>
+#include <wiringPi.h>
 #include <lmic.h>
-#include <hal/hal.h>
-#include <SPI.h>
+#include <hal.h>
+#include <local_hal.h>
 
 // LoRaWAN Application identifier (AppEUI)
 // Not used in this example
@@ -46,7 +49,7 @@ static const u1_t ARTKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
 
 // LoRaWAN end-device address (DevAddr)
 // See http://thethingsnetwork.org/wiki/AddressSpace
-static const u4_t DEVADDR = 0x03FF0001 ; // <-- Change this address for every node!
+static const u4_t DEVADDR = 0xffffffff ; // <-- Change this address for every node!
 
 //////////////////////////////////////////////////
 // APPLICATION CALLBACKS
@@ -67,15 +70,16 @@ void os_getDevKey (u1_t* buf) {
     memcpy(buf, DEVKEY, 16);
 }
 
-uint8_t mydata[] = "Hello, world!";
+u4_t cntr=0;
+u1_t mydata[] = {"Hello, world!                               "};
 static osjob_t sendjob;
 
 // Pin mapping
 lmic_pinmap pins = {
-  .nss = 10,
-  .rxtx = 7, // Not connected on RFM92/RFM95
-  .rst = 9,  // Needed on RFM92/RFM95
-  .dio = {2, 5, 6},
+  .nss = 13,
+  .rxtx = UNUSED_PIN, // Not connected on RFM92/RFM95
+  .rst = 14,  // Needed on RFM92/RFM95
+  .dio = {6,7,10}
 };
 
 void onEvent (ev_t ev) {
@@ -86,11 +90,10 @@ void onEvent (ev_t ev) {
       // note: this includes the receive window!
       case EV_TXCOMPLETE:
           // use this event to keep track of actual transmissions
-          Serial.print("Event EV_TXCOMPLETE, time: ");
-          Serial.println(millis() / 1000);
+          fprintf(stdout, "Event EV_TXCOMPLETE, time: %d\n", millis() / 1000);
           if(LMIC.dataLen) { // data received in rx slot after tx
               //debug_buf(LMIC.frame+LMIC.dataBeg, LMIC.dataLen);
-              Serial.println("Data Received!");
+              fprintf(stdout, "Data Received!\n");
           }
           break;
        default:
@@ -98,36 +101,40 @@ void onEvent (ev_t ev) {
     }
 }
 
-void do_send(osjob_t* j){
-      Serial.print("Time: ");
-      Serial.println(millis() / 1000);
+static void do_send(osjob_t* j){
+      time_t t=time(NULL);
+      fprintf(stdout, "[%x] (%ld) %s\n", hal_ticks(), t, ctime(&t));
       // Show TX channel (channel numbers are local to LMIC)
-      Serial.print("Send, txCnhl: ");
-      Serial.println(LMIC.txChnl);
-      Serial.print("Opmode check: ");
       // Check if there is not a current TX/RX job running
     if (LMIC.opmode & (1 << 7)) {
-      Serial.println("OP_TXRXPEND, not sending");
+      fprintf(stdout, "OP_TXRXPEND, not sending");
     } else {
-      Serial.println("ok");
       // Prepare upstream data transmission at the next possible time.
-      LMIC_setTxData2(1, mydata, sizeof(mydata)-1, 0);
+      char buf[100];
+      sprintf(buf, "Hello world! [%d]", cntr++);
+      int i=0;
+      while(buf[i]) {
+        mydata[i]=buf[i];
+        i++;
+      }
+      mydata[i]='\0';
+      LMIC_setTxData2(1, mydata, strlen(buf), 0);
     }
     // Schedule a timed job to run at the given timestamp (absolute system time)
-    os_setTimedCallback(j, os_getTime()+sec2osticks(120), do_send);
+    os_setTimedCallback(j, os_getTime()+sec2osticks(20), do_send);
          
 }
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("Starting");
   // LMIC init
+  wiringPiSetup();
+
   os_init();
   // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
   // Set static session parameters. Instead of dynamically establishing a session 
   // by joining the network, precomputed session parameters are be provided.
-  LMIC_setSession (0x1, DEVADDR, (uint8_t*)DEVKEY, (uint8_t*)ARTKEY);
+  LMIC_setSession (0x1, DEVADDR, (u1_t*)DEVKEY, (u1_t*)ARTKEY);
   // Disable data rate adaptation
   LMIC_setAdrMode(0);
   // Disable link check validation
@@ -139,7 +146,6 @@ void setup() {
   // Set data rate and transmit power (note: txpow seems to be ignored by the library)
   LMIC_setDrTxpow(DR_SF7,14);
   //
-  Serial.flush();
 }
 
 void loop() {
@@ -147,7 +153,18 @@ void loop() {
 do_send(&sendjob);
 
 while(1) {
-  os_runloop_once();
+  os_runloop();
+//  os_runloop_once();
   }
+}
+
+
+int main() {
+  setup();
+
+  while (1) {
+    loop();
+  }
+  return 0;
 }
 
