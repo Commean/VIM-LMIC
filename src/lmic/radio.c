@@ -385,7 +385,7 @@ static u1_t randbuf[16];
 
 static void writeReg (u1_t addr, u1_t data ) {
     hal_spi_write(addr | 0x80, &data, 1);
-#if LMIC_DEBUG_LEVEL > 0
+#if LMIC_DEBUG_LEVEL > 2
     LMIC_DEBUG_PRINTF("W: Addr: %d - Data: %d\n", addr, data);
 #endif
 }
@@ -394,7 +394,7 @@ static u1_t readReg (u1_t addr) {
     u1_t buf[1];
     hal_spi_read(addr & 0x7f, buf, 1);
 
-#if LMIC_DEBUG_LEVEL > 0
+#if LMIC_DEBUG_LEVEL > 2
     LMIC_DEBUG_PRINTF("R: Addr: %d - Data: %d\n", addr, buf[0]);
 #endif
     return buf[0];
@@ -1105,7 +1105,10 @@ static void startrx (u1_t rxmode) {
 //! Generally, all these are satisfied by a call to `hal_init_with_pinmap()`.
 //!
 int radio_init () {
-    fprintf(stdout, "Radio init...\n");
+#if LMIC_DEBUG_LEVEL > 0
+    LMIC_DEBUG_PRINTF("Radio init...\n");
+    LMIC_DEBUG_PRINTF("OSTICKS_PER_SEC: %d - ms2osticks(1): %d\n", OSTICKS_PER_SEC, ms2osticks(1));
+#endif
     requestModuleActive(1);
 
     // manually reset radio
@@ -1114,7 +1117,6 @@ int radio_init () {
 #else
     hal_pin_rst(1); // drive RST pin high
 #endif
-    fprintf(stdout, "OSTICKS_PER_SEC: %d - ms2osticks(1): %d\n", OSTICKS_PER_SEC, ms2osticks(1));
     hal_waitUntil(os_getTime()+ms2osticks(1)); // wait >100us
     hal_pin_rst(2); // configure RST pin floating!
     hal_waitUntil(os_getTime()+ms2osticks(5)); // wait 5ms
