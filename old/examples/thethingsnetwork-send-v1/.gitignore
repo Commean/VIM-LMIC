@@ -1,3 +1,1 @@
-*.o
 thethingsnetwork-send-v1
-!Makefile
