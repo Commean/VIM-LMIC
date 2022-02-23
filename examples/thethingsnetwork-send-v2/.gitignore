@@ -1,2 +1,3 @@
 *.o
 thethingsnetwork-send-v2
+!Makefile
