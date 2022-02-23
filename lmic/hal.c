@@ -70,6 +70,7 @@ void hal_pin_nss (u1_t val) {
 // perform SPI transaction with radio
 u1_t hal_spi (u1_t out) {
     u1_t res = wiringPiSPIDataRW(0, &out, 1);
+    fprintf(stdout, "Out: %d - Result: %d\n", out, res);
     return out;
 }
 
