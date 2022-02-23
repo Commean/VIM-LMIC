@@ -47,6 +47,10 @@ static void hal_io_init () {
 //    fprintf("dio[2]: "); Serial.println(plmic_pins->dio[2]);
 
     // initialize SPI chip select to high (it's active low)
+#ifdef VIM3
+    ASSERT(wiringPiSetup() == 0);
+#endif
+
     digitalWrite(plmic_pins->nss, HIGH);
     pinMode(plmic_pins->nss, OUTPUT);
 
@@ -152,7 +156,11 @@ static void hal_interrupt_init() {
           continue;
 
       pinMode(plmic_pins->dio[i], INPUT);
+#ifndef VIM3
       attachInterrupt(digitalPinToInterrupt(plmic_pins->dio[i]), interrupt_fns[i], RISING);
+#else
+      wiringPiISR(plmic_pins->dio[i], INT_EDGE_RISING, interrupt_fns[i]);
+#endif
   }
 }
 #endif // LMIC_USE_INTERRUPTS
@@ -187,9 +195,18 @@ void hal_processPendingIRQs() {
 
 #ifdef VIM3
 static int spifd;
+
+// perform SPI transaction with radio
+u1_t hal_spi (u1_t out) {
+    u1_t res = wiringPiSPIDataRW(0, &out, 1);
+    //fprintf(stdout, "Out: %d - Result: %d\n", out, res);
+    return out;
+}
 #endif
 
+
 static void hal_spi_init () {
+    //fprintf(stdout, "hal_spi_init\n");
 #ifndef VIM3
     SPI.begin();
 #else
@@ -212,23 +229,27 @@ static void hal_spi_trx(u1_t cmd, u1_t* buf, size_t len, bit_t is_read) {
 
 #ifndef VIM3
     SPI.transfer(cmd);
+#else
+    wiringPiSPIDataRW(0, &cmd, 1);
+#endif
 
     for (; len > 0; --len, ++buf) {
         u1_t data = is_read ? 0x00 : *buf;
+#ifndef VIM3
         data = SPI.transfer(data);
+#else
+        wiringPiSPIDataRW(0, &data, 1);
+#endif
         if (is_read)
             *buf = data;
     }
-#else
-    u1_t res = wiringPiSPIDataRW(0, &cmd, 1);
-    buf = &res;
-#endif
 
     digitalWrite(nss, 1);
 #ifndef VIM3
     SPI.endTransaction();
 #endif
 }
+
 
 void hal_spi_write(u1_t cmd, const u1_t* buf, size_t len) {
     hal_spi_trx(cmd, (u1_t*)buf, len, 0);
@@ -315,6 +336,7 @@ u4_t hal_waitUntil (u4_t time) {
     if (delta < 0)
         return -delta;
 
+    //fprintf(stdout, "waitUntil(%d) delta=%d\n", time, delta);
     // From delayMicroseconds docs: Currently, the largest value that
     // will produce an accurate delay is 16383. Also, STM32 does a better
     // job with delay is less than 10,000 us; so reduce in steps.
@@ -462,6 +484,7 @@ void hal_init_ex (const void *pContext) {
 namespace Arduino_LMIC {
 bool hal_init_with_pinmap(const HalPinmap_t *pPinmap)
     {
+    //fprintf(stdout, "hal_init_with_pinmap\n");
     if (pPinmap == nullptr)
         return false;
 

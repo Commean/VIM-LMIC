@@ -222,7 +222,7 @@ void setup() {
 }
 
 void loop() {
-    os_runloop_once();
+    os_runloop();
 }
 
 int main()
