@@ -229,23 +229,20 @@ static void hal_spi_trx(u1_t cmd, u1_t* buf, size_t len, bit_t is_read) {
 
 #ifndef VIM3
     SPI.transfer(cmd);
-
-    for (; len > 0; --len, ++buf) {
-        u1_t data = is_read ? 0x00 : *buf;
-        data = SPI.transfer(data);
-        if (is_read)
-            *buf = data;
-    }
 #else
     wiringPiSPIDataRW(0, &cmd, 1);
+#endif
 
     for (; len > 0; --len, ++buf) {
         u1_t data = is_read ? 0x00 : *buf;
+#ifndef VIM3
+        data = SPI.transfer(data);
+#else
         wiringPiSPIDataRW(0, &data, 1);
+#endif
         if (is_read)
             *buf = data;
     }
-#endif
 
     digitalWrite(nss, 1);
 #ifndef VIM3
