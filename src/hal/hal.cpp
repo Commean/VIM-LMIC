@@ -199,14 +199,14 @@ static int spifd;
 // perform SPI transaction with radio
 u1_t hal_spi (u1_t out) {
     u1_t res = wiringPiSPIDataRW(0, &out, 1);
-    fprintf(stdout, "Out: %d - Result: %d\n", out, res);
+    //fprintf(stdout, "Out: %d - Result: %d\n", out, res);
     return out;
 }
 #endif
 
 
 static void hal_spi_init () {
-    fprintf(stdout, "hal_spi_init\n");
+    //fprintf(stdout, "hal_spi_init\n");
 #ifndef VIM3
     SPI.begin();
 #else
@@ -339,7 +339,7 @@ u4_t hal_waitUntil (u4_t time) {
     if (delta < 0)
         return -delta;
 
-    fprintf(stdout, "waitUntil(%d) delta=%d\n", time, delta);
+    //fprintf(stdout, "waitUntil(%d) delta=%d\n", time, delta);
     // From delayMicroseconds docs: Currently, the largest value that
     // will produce an accurate delay is 16383. Also, STM32 does a better
     // job with delay is less than 10,000 us; so reduce in steps.
