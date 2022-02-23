@@ -33,23 +33,23 @@
 
 // LoRaWAN Application identifier (AppEUI)
 // Not used in this example
-static const u1_t APPEUI[8]  = { 0x02, 0x00, 0x00, 0x00, 0x00, 0xEE, 0xFF, 0xC0 };
+static const u1_t APPEUI[8]  = { 0x88, 0x8A, 0x24, 0x90, 0xF2, 0xF5, 0x24, 0x34 };
 
 // LoRaWAN DevEUI, unique device ID (LSBF)
 // Not used in this example
-static const u1_t DEVEUI[8]  = { 0x42, 0x42, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF };
+static const u1_t DEVEUI[8]  = { 0xCE, 0xC3, 0x04, 0xD0, 0x7E, 0xD5, 0xB3, 0x70  };
 
 // LoRaWAN NwkSKey, network session key 
 // Use this key for The Things Network
-static const u1_t DEVKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
+static const u1_t DEVKEY[16] = { 0xBC, 0xC8, 0x80, 0x9E, 0x93, 0xC8, 0x65, 0xA4, 0x17, 0x7F, 0x07, 0x4E, 0x9E, 0x17, 0xEA, 0xAA };
 
 // LoRaWAN AppSKey, application session key
 // Use this key to get your data decrypted by The Things Network
-static const u1_t ARTKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
+//static const u1_t ARTKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
 
 // LoRaWAN end-device address (DevAddr)
 // See http://thethingsnetwork.org/wiki/AddressSpace
-static const u4_t DEVADDR = 0xffffffff ; // <-- Change this address for every node!
+//static const u4_t DEVADDR = 0xffffffff ; // <-- Change this address for every node!
 
 //////////////////////////////////////////////////
 // APPLICATION CALLBACKS
@@ -134,7 +134,7 @@ void setup() {
   LMIC_reset();
   // Set static session parameters. Instead of dynamically establishing a session 
   // by joining the network, precomputed session parameters are be provided.
-  LMIC_setSession (0x1, DEVADDR, (u1_t*)DEVKEY, (u1_t*)ARTKEY);
+  //LMIC_setSession (0x1, DEVADDR, (u1_t*)DEVKEY, (u1_t*)ARTKEY);
   // Disable data rate adaptation
   LMIC_setAdrMode(0);
   // Disable link check validation
