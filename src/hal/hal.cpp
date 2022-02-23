@@ -47,6 +47,8 @@ static void hal_io_init () {
 //    fprintf("dio[2]: "); Serial.println(plmic_pins->dio[2]);
 
     // initialize SPI chip select to high (it's active low)
+    wiringPiSetup();
+    wiringPiSPISetup(0, 25000000);
     digitalWrite(plmic_pins->nss, HIGH);
     pinMode(plmic_pins->nss, OUTPUT);
 
@@ -315,6 +317,7 @@ u4_t hal_waitUntil (u4_t time) {
     if (delta < 0)
         return -delta;
 
+    fprintf(stdout, "waitUntil(%d) delta=%d\n", time, delta);
     // From delayMicroseconds docs: Currently, the largest value that
     // will produce an accurate delay is 16383. Also, STM32 does a better
     // job with delay is less than 10,000 us; so reduce in steps.

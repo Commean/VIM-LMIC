@@ -808,7 +808,6 @@ static void txlora () {
     opmodeLora();
     LMIC_DEBUG_PRINTF("%d-%d\n", readReg(RegOpMode),OPMODE_LORA);
     ASSERT((readReg(RegOpMode) & OPMODE_LORA) != 0);
-    ASSERT(1==0);
 
     // enter standby mode (required for FIFO loading))
     opmode(OPMODE_STANDBY);
@@ -1111,6 +1110,7 @@ int radio_init () {
 #else
     hal_pin_rst(1); // drive RST pin high
 #endif
+    fprintf(stdout, "OSTICKS_PER_SEC: %d - ms2osticks(1): %d\n", OSTICKS_PER_SEC, ms2osticks(1));
     hal_waitUntil(os_getTime()+ms2osticks(1)); // wait >100us
     hal_pin_rst(2); // configure RST pin floating!
     hal_waitUntil(os_getTime()+ms2osticks(5)); // wait 5ms

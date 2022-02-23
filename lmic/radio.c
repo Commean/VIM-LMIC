@@ -646,6 +646,7 @@ static void startrx (u1_t rxmode) {
 // get random seed from wideband noise rssi
 void radio_init () {
     hal_disableIRQs();
+    fprintf(stdout, "OSTICKS_PER_SEC: %d - ms2osticks(1): %d\n", OSTICKS_PER_SEC, ms2osticks(1));
 
     // manually reset radio
 #ifdef CFG_sx1276_radio

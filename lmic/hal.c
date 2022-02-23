@@ -141,7 +141,7 @@ static u4_t delta_time(u4_t time) {
 void hal_waitUntil (u4_t time) {
     u4_t now=hal_ticks();
     u4_t delta = delta_time(time);
-    //fprintf(stderr, "waitUntil(%d) delta=%d\n", time, delta);
+    fprintf(stdout, "waitUntil(%d) delta=%d\n", time, delta);
     s4_t t=time-now;
     if (delta==0) return;
     if (t>0) { 
