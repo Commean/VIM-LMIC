@@ -1102,6 +1102,7 @@ static void startrx (u1_t rxmode) {
 //! Generally, all these are satisfied by a call to `hal_init_with_pinmap()`.
 //!
 int radio_init () {
+    fprintf(stdout, "Radio init...\n");
     requestModuleActive(1);
 
     // manually reset radio
