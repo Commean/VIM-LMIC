@@ -45,7 +45,6 @@
 #include <iostream>
 #include <string>
 
-
 #define MAX_CHANNELS 16
 #define MAX_BANDS 4
 #define LIMIT_CHANNELS 0b1000
@@ -224,7 +223,6 @@ void onEvent(ev_t ev)
     }
 }
 
-
 const char *printBool(bool b)
 {
     return b ? "✓" : "✗";
@@ -232,8 +230,9 @@ const char *printBool(bool b)
 
 void setupZeroMQ()
 {
-    socket.bind("tcp://*:5555");
-    // printf("%lx %lx %lx %lx %lx\n", APPEUI[0], APPEUI[1], APPEUI[2], APPEUI[3], APPEUI[4]);
+    auto address = "tcp://*:5555";
+    socket.bind(address);
+    std::cout << "ZeroMQ running on: " << address << std::endl;
 
     // APPEUI DEVEUI APPKEY
     bool setupDone[3] = {false, false, false};
@@ -283,12 +282,7 @@ void setupZeroMQ()
         socket.send(msg);
 
     } while (!(setupDone[0] && setupDone[1] && setupDone[2]));
-
-    // os_setArtEui(recv_msgs[0].data<u1_t>());
-    // printf("%lx %lx %lx %lx %lx\n", APPEUI[0], APPEUI[1], APPEUI[2], APPEUI[3], APPEUI[4]);
-
-    // std::cout << "Test: [" << APPEUI << "] "
-    //           << recv_msgs[1].to_string() << std::endl;
+    printf("Received all credentials!\n");
 }
 
 void setup()
