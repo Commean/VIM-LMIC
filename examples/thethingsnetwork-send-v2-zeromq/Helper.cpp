@@ -1,4 +1,5 @@
 #include <iostream>
+#include <lmic.h>
 
 void printCred(u1_t *cred)
 {
