@@ -67,8 +67,7 @@ void printHex2(unsigned v) {
     v &= 0xff;
     if (v < 16)
         printf("0");
-    //fprintf(v, HEX);
-    printf("TODO!\n");
+    printf("%x", v);
 }
 
 void do_send(osjob_t* j){
