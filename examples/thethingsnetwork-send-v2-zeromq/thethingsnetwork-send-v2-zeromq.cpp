@@ -211,6 +211,21 @@ void onEvent(ev_t ev)
     }
 }
 
+bool recv(std::vector<zmq::message_t> &recv_msgs)
+{
+    auto result =
+        zmq::recv_multipart(socket, std::back_inserter(recv_msgs));
+    // assert(result && "recv failed");
+    if (result && *result != 2)
+    {
+        std::cout << "Invalid input!" << std::endl;
+        return false;
+    }
+    std::cout << "Topic: [" << recv_msgs[0].to_string() << "] "
+              << recv_msgs[1].str() << std::endl;
+    return true;
+}
+
 void setupZeroMQ()
 {
     auto address = "tcp://*:5555";
@@ -225,16 +240,9 @@ void setupZeroMQ()
         std::string msgText;
         std::vector<zmq::message_t> recv_msgs;
         printf("Waiting for credentials... (%s/%s/%s)\n", printBool(setupDone[0]), printBool(setupDone[1]), printBool(setupDone[2]));
-        auto result =
-            zmq::recv_multipart(socket, std::back_inserter(recv_msgs));
-        // assert(result && "recv failed");
-        if (result && *result != 2)
-        {
-            std::cout << "Invalid input!" << std::endl;
+
+        if (!recv(recv_msgs))
             continue;
-        }
-        std::cout << "Topic: [" << recv_msgs[0].to_string() << "] "
-                  << recv_msgs[1].str() << std::endl;
 
         if (recv_msgs[0].to_string() == "APPEUI")
         {
