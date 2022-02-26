@@ -38,8 +38,6 @@
 
 #include <iostream>
 
-static uint8_t mydata[] = "Hello, world!";
-
 static osjob_t sendjob;
 
 // Schedule TX every this many seconds (might become longer due to duty
