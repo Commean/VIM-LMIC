@@ -72,14 +72,6 @@ const lmic_pinmap lmic_pins = {
     .dio = {6, 7, LMIC_UNUSED_PIN},
 };
 
-void printHex2(unsigned v)
-{
-    v &= 0xff;
-    if (v < 16)
-        printf("0");
-    printf("%x", v);
-}
-
 void do_send(osjob_t *j)
 {
     // Check if there is not a current TX/RX job running
@@ -217,11 +209,6 @@ void onEvent(ev_t ev)
         // Serial.println((unsigned) ev);
         break;
     }
-}
-
-const char *printBool(bool b)
-{
-    return b ? "✓" : "✗";
 }
 
 void setupZeroMQ()

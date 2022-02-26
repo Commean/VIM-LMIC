@@ -9,3 +9,16 @@ void printCred(u1_t *cred)
     }
     printf("\n");
 }
+
+const char *printBool(bool b)
+{
+    return b ? "✓" : "✗";
+}
+
+void printHex2(unsigned v)
+{
+    v &= 0xff;
+    if (v < 16)
+        printf("0");
+    printf("%x", v);
+}
