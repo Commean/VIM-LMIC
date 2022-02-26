@@ -33,6 +33,7 @@
 #include <lmic.h>
 #include <hal/hal.h>
 #include "Credentials.h"
+#include "Helper.cpp"
 
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -44,10 +45,6 @@
 #include <future>
 #include <iostream>
 #include <string>
-
-#define MAX_CHANNELS 16
-#define MAX_BANDS 4
-#define LIMIT_CHANNELS 0b1000
 
 static uint8_t mydata[] = "Hello, world!";
 
@@ -80,8 +77,7 @@ void printHex2(unsigned v)
     v &= 0xff;
     if (v < 16)
         printf("0");
-    // fprintf(v, HEX);
-    printf("TODO!\n");
+    printf("%x", v);
 }
 
 void do_send(osjob_t *j)
@@ -256,19 +252,19 @@ void setupZeroMQ()
         if (recv_msgs[0].to_string() == "APPEUI")
         {
             // std::cout << "Heureka!!!!!" << std::endl;
-            os_setArtEui(recv_msgs[0].data<u1_t>());
+            os_setArtEui(recv_msgs[1].data<u1_t>());
             msgText = "ACK";
             setupDone[0] = true;
         }
         else if (recv_msgs[0].to_string() == "DEVEUI")
         {
-            os_setDevEui(recv_msgs[0].data<u1_t>());
+            os_setDevEui(recv_msgs[1].data<u1_t>());
             msgText = "ACK";
             setupDone[1] = true;
         }
         else if (recv_msgs[0].to_string() == "APPKEY")
         {
-            os_setDevKey(recv_msgs[0].data<u1_t>());
+            os_setDevKey(recv_msgs[1].data<u1_t>());
             msgText = "ACK";
             setupDone[2] = true;
         }
@@ -283,6 +279,7 @@ void setupZeroMQ()
 
     } while (!(setupDone[0] && setupDone[1] && setupDone[2]));
     printf("Received all credentials!\n");
+    // printCred(APPEUI);
 }
 
 void setup()
@@ -310,21 +307,5 @@ int main()
 {
     setup();
     loop();
-
-    while (true)
-    {
-        zmq::message_t request;
-
-        //  Wait for next request from client
-        socket.recv(&request);
-        std::cout << "Received Hello" << std::endl;
-
-        sleep(1);
-
-        //  Send reply back to client
-        zmq::message_t reply(5);
-        memcpy((void *)reply.data(), "LMIC-Daemon running...", 23);
-        socket.send(reply);
-    }
     return 0;
 }
