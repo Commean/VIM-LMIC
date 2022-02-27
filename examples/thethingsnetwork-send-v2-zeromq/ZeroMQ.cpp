@@ -118,9 +118,8 @@ void setupZeroMQ()
             msgText = "WRONG_TOPIC";
         }
 
-        zmq::message_t msg(msgText.c_str(), msgText.length());
         socket.send(recv_msgs[0], zmq::send_flags::sndmore);
-        socket.send(msg);
+        socket.send(zmq::buffer(msgText));
 
     } while (!(setupDone[0] && setupDone[1] && setupDone[2]));
     printf("Received all credentials!\n");
