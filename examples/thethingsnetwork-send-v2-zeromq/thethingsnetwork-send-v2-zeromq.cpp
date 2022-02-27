@@ -156,9 +156,11 @@ void onEvent(ev_t ev)
         if (LMIC.txrxFlags & TXRX_ACK)
             fprintf(stdout, "Received ack\n");
         if (LMIC.dataLen)
-        {
             fprintf(stdout, "Received %d bytes of payload\n", LMIC.dataLen);
-        }
+
+        // Clear string
+        currentData.clear();
+
         // Schedule next transmission
         os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
         break;
