@@ -20,7 +20,12 @@ bool recv(std::vector<zmq::message_t> &recv_msgs)
     // assert(result && "recv failed");
     if (result && *result != 2)
     {
-        std::cout << "Invalid input!" << std::endl;
+        std::string msgText = "Invalid input. Please use multipart with [TOPIC, VALUE]!";
+        std::cout << msgText << std::endl;
+
+        socket.send(zmq::str_buffer("ERROR"), zmq::send_flags::sndmore);
+        socket.send(zmq::buffer(msgText));
+
         return false;
     }
     std::cout << "Topic: [" << recv_msgs[0].to_string() << "] "
