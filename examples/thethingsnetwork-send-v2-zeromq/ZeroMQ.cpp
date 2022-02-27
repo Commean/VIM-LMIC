@@ -7,7 +7,7 @@
 
 #include "Credentials.h"
 
-u1_t *currentData = nullptr;
+std::string currentData;
 std::thread thread;
 
 zmq::context_t context(1);
@@ -48,9 +48,9 @@ void ZeroMQThread()
 
         if (topic == "COMMEAN_DATA")
         {
-            auto data = recv_msgs[1].data<u1_t>();
+            auto data = recv_msgs[1].to_string();
 
-            if (currentData == nullptr)
+            if (currentData == "")
             {
                 std::cout << "Receiving new data..." << std::endl;
                 currentData = data;

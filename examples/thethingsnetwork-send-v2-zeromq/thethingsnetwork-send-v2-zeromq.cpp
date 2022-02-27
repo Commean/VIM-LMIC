@@ -32,11 +32,12 @@
  *******************************************************************************/
 #include <lmic.h>
 #include <hal/hal.h>
-#include "Credentials.h"
 #include "Helper.cpp"
 #include "ZeroMQ.cpp"
 
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 static osjob_t sendjob;
 
@@ -68,28 +69,16 @@ void do_send(osjob_t *j)
     }
     else
     {
-        std::string msgText;
-        std::vector<zmq::message_t> recv_msgs;
-        if (!recv(recv_msgs))
-            return;
-
-        if (recv_msgs[0].to_string() == "COMMEAN_DATA")
+        while (currentData == "")
         {
-            auto data = recv_msgs[1].data<u1_t>();
-
-            // Prepare upstream data transmission at the next possible time.
-            LMIC_setTxData2(1, (xref2u1_t)data, sizeof(data) - 1, 0);
-            fprintf(stdout, "Packet queued\n");
-            msgText = "ACK";
-        }
-        else
-        {
-            msgText = "NACK";
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
 
-        zmq::message_t msg(msgText.c_str(), msgText.length());
-        socket.send(recv_msgs[0], zmq::send_flags::sndmore);
-        socket.send(msg);
+        printf("Sending: ");
+
+        std::cout << currentData << std::endl;
+        LMIC_setTxData2(1, (xref2u1_t)currentData.c_str(), sizeof(currentData) - 1, 0);
+        fprintf(stdout, "Packet queued\n");
     }
     // Next TX is scheduled after TX_COMPLETE event.
 }
