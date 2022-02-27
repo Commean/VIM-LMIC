@@ -2,6 +2,13 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 #include <iostream>
+#include <future>
+#include <thread>
+
+#include "Credentials.h"
+
+u1_t *currentData = nullptr;
+std::thread thread;
 
 zmq::context_t context(1);
 zmq::socket_t socket(context, ZMQ_REP);
@@ -19,6 +26,49 @@ bool recv(std::vector<zmq::message_t> &recv_msgs)
     std::cout << "Topic: [" << recv_msgs[0].to_string() << "] "
               << recv_msgs[1].str() << std::endl;
     return true;
+}
+
+void ZeroMQThread()
+{
+    std::cout << "Thread running" << std::endl;
+    while (true)
+    {
+        std::string msgText;
+        std::vector<zmq::message_t> recv_msgs;
+
+        if (!recv(recv_msgs))
+            continue;
+
+        auto topic = recv_msgs[0].to_string();
+
+        if (topic == "COMMEAN_DATA")
+        {
+            auto data = recv_msgs[1].data<u1_t>();
+
+            if (currentData == nullptr)
+            {
+                std::cout << "Receiving new data..." << std::endl;
+                currentData = data;
+                msgText = "ACK";
+            }
+            else
+            {
+                // TODO: Buffer
+                std::cout << "Buffer full" << std::endl;
+                msgText = "BUFFER_FULL";
+            }
+        }
+        else
+        {
+            std::cout << "Wrong topic [" << topic << "]" << std::endl;
+
+            msgText = "WRONG_TOPIC";
+        }
+
+        zmq::message_t msg(msgText.c_str(), msgText.length());
+        socket.send(recv_msgs[0], zmq::send_flags::sndmore);
+        socket.send(msg);
+    }
 }
 
 void setupZeroMQ()
@@ -60,7 +110,7 @@ void setupZeroMQ()
         }
         else
         {
-            msgText = "NACK";
+            msgText = "WRONG_TOPIC";
         }
 
         zmq::message_t msg(msgText.c_str(), msgText.length());
@@ -70,4 +120,7 @@ void setupZeroMQ()
     } while (!(setupDone[0] && setupDone[1] && setupDone[2]));
     printf("Received all credentials!\n");
     // printCred(APPEUI);
+
+    // Starting server thread
+    thread = std::thread(ZeroMQThread);
 }
