@@ -1,0 +1,10 @@
+[Unit]
+Description=Commean (TTN) Bridge
+After=syslog.target
+
+[Service]
+Type=simple
+ExecStart=cbridge
+
+[Install]
+WantedBy=multi-user.target
