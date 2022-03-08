@@ -153,7 +153,7 @@ void onEvent(ev_t ev)
         fprintf(stdout, "EV_REJOIN_FAILED\n");
         break;
     case EV_TXCOMPLETE:
-        fprintf(stdout, "EV_TXCOMPLETE (includes waiting for RX windows\n)");
+        fprintf(stdout, "EV_TXCOMPLETE (includes waiting for RX windows)");
         if (LMIC.txrxFlags & TXRX_ACK)
             fprintf(stdout, "Received ack\n");
         if (LMIC.dataLen)
