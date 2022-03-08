@@ -62,6 +62,7 @@ const lmic_pinmap lmic_pins = {
 
 void do_send(osjob_t *j)
 {
+    fprintf(stdout, "do_send\n");
     // Check if there is not a current TX/RX job running
     if (LMIC.opmode & OP_TXRXPEND)
     {
@@ -77,7 +78,7 @@ void do_send(osjob_t *j)
         printf("Sending: ");
 
         std::cout << currentData << std::endl;
-        LMIC_setTxData2(1, (xref2u1_t)currentData.c_str(), sizeof(currentData) - 1, 0);
+        LMIC_setTxData2(1, (xref2u1_t)currentData.c_str(), currentData.length(), 0);
         fprintf(stdout, "Packet queued\n");
     }
     // Next TX is scheduled after TX_COMPLETE event.
