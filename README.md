@@ -2,7 +2,7 @@
 
 This is lmic from IBM ported to Khadas VIM3.
 
-Based on [ernstdevreede/lmic_pi](https://github.com/ernstdevreede/lmic_pi) (v2) and [mcci-catena/arduino-lmic](https://github.com/mcci-catena/arduino-lmic) (v1).
+Based on [ernstdevreede/lmic_pi](https://github.com/ernstdevreede/lmic_pi) and [mcci-catena/arduino-lmic](https://github.com/mcci-catena/arduino-lmic).
 
 
 ## Dependencies
