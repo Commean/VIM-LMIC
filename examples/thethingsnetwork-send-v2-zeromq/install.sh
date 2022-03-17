@@ -1,5 +1,7 @@
 #!/bin/bash
 
+services=(service/cbridge.service)
+
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
   exit
@@ -7,13 +9,12 @@ fi
 
 echo "Installing CBridge"
 
-cd src/build
+cd build
 make install
 
 
 echo "Installing SystemD module"
 
-services=(service/cbridge.service)
 
 for service in ${services[@]}; do
     echo "Installing $service..."
