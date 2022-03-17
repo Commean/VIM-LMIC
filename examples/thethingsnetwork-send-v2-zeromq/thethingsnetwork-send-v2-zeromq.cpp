@@ -112,26 +112,11 @@ void onEvent(ev_t ev)
             u1_t nwkKey[16];
             u1_t artKey[16];
             LMIC_getSessionKeys(&netid, &devaddr, nwkKey, artKey);
-            fprintf(stdout, "netid: ");
-            // Serial.println(netid, DEC);
-            fprintf(stdout, "devaddr: ");
-            // Serial.println(devaddr, HEX);
+            fprintf(stdout, "netid: %d - devaddr: %x\n", netid, devaddr);
             fprintf(stdout, "AppSKey: ");
-            for (size_t i = 0; i < sizeof(artKey); ++i)
-            {
-                if (i != 0)
-                    fprintf(stdout, "-");
-                printHex2(artKey[i]);
-            }
-            // Serial.println("");
+            printKey(artKey);
             fprintf(stdout, "NwkSKey: ");
-            for (size_t i = 0; i < sizeof(nwkKey); ++i)
-            {
-                if (i != 0)
-                    fprintf(stdout, "-");
-                printHex2(nwkKey[i]);
-            }
-            // Serial.println();
+            printKey(nwkKey);
         }
         // Disable link check validation (automatically enabled
         // during join, but because slow data rates change max TX
@@ -153,7 +138,7 @@ void onEvent(ev_t ev)
         fprintf(stdout, "EV_REJOIN_FAILED\n");
         break;
     case EV_TXCOMPLETE:
-        fprintf(stdout, "EV_TXCOMPLETE (includes waiting for RX windows)");
+        fprintf(stdout, "EV_TXCOMPLETE (includes waiting for RX windows)\n");
         if (LMIC.txrxFlags & TXRX_ACK)
             fprintf(stdout, "Received ack\n");
         if (LMIC.dataLen)

@@ -23,3 +23,15 @@ void printHex2(unsigned v)
         printf("0");
     printf("%x", v);
 }
+
+void printKey(u1_t *key)
+{
+    for (size_t i = 0; i < sizeof(key); ++i)
+    {
+        if (i != 0)
+            fprintf(stdout, "-");
+        printHex2(key[i]);
+    }
+
+    fprintf(stdout, "\n");
+}
